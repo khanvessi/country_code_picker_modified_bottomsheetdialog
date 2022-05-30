@@ -15,8 +15,10 @@ import android.widget.EditText;
 import android.widget.ListView;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.core.content.ContextCompat;
+import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.google.android.material.bottomsheet.BottomSheetDialog;
@@ -24,7 +26,7 @@ import com.google.android.material.bottomsheet.BottomSheetDialog;
 import java.util.ArrayList;
 import java.util.List;
 
-public class CountryCodeDialog extends BottomSheetDialog {
+public class CountryCodeDialog extends BottomSheetDialog implements CountryCodeRecyclerviewAdapter.ItemClickListener {
 
 
     private static final String TAG = "CountryCodeDialog";
@@ -41,6 +43,8 @@ public class CountryCodeDialog extends BottomSheetDialog {
     private InputMethodManager mInputMethodManager;
     private CountryCodeArrayAdapter mArrayAdapter;
     private List<Country> mTempCountries;
+    private CountryCodeRecyclerviewAdapter countryCodeRecyclerviewAdapter;
+    private RecyclerView countriesRecview;
 
 
     @Override
@@ -62,22 +66,23 @@ public class CountryCodeDialog extends BottomSheetDialog {
 
     private void setupUI() {
         mRlyDialog = findViewById(R.id.dialog_rly);
-        mLvCountryDialog = findViewById(R.id.country_dialog_lv);
+//        mLvCountryDialog = findViewById(R.id.country_dialog_lv);
         mTvTitle = findViewById(R.id.title_tv);
-        mEdtSearch = findViewById(R.id.search_edt);
+//        mEdtSearch = findViewById(R.id.search_edt);
         mTvNoResult = findViewById(R.id.no_result_tv);
+        countriesRecview = findViewById(R.id.countries_rec_view);
     }
 
     private void setupData() {
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR1) {
-            mLvCountryDialog.setLayoutDirection(mCountryCodePicker.getLayoutDirection());
+            countriesRecview.setLayoutDirection(mCountryCodePicker.getLayoutDirection());
         }
 
         if (mCountryCodePicker.getTypeFace() != null) {
             Typeface typeface = mCountryCodePicker.getTypeFace();
             mTvTitle.setTypeface(typeface);
-            mEdtSearch.setTypeface(typeface);
+//            mEdtSearch.setTypeface(typeface);
             mTvNoResult.setTypeface(typeface);
         }
 
@@ -89,8 +94,8 @@ public class CountryCodeDialog extends BottomSheetDialog {
             int color = mCountryCodePicker.getDialogTextColor();
             mTvTitle.setTextColor(color);
             mTvNoResult.setTextColor(color);
-            mEdtSearch.setTextColor(color);
-            mEdtSearch.setHintTextColor(adjustAlpha(color, 0.7f));
+//            mEdtSearch.setTextColor(color);
+//            mEdtSearch.setHintTextColor(adjustAlpha(color, 0.7f));
         }
 
         mCountryCodePicker.refreshCustomMasterList();
@@ -98,11 +103,42 @@ public class CountryCodeDialog extends BottomSheetDialog {
         masterCountries = mCountryCodePicker.getCustomCountries(mCountryCodePicker);
 
         mFilteredCountries = getFilteredCountries();
-        setupListView(mLvCountryDialog);
+        setupRecView(countriesRecview);
+       // setupListView(mLvCountryDialog);
 
         Context ctx = mCountryCodePicker.getContext();
         mInputMethodManager = (InputMethodManager) ctx.getSystemService(Context.INPUT_METHOD_SERVICE);
         setSearchBar();
+    }
+
+    private void setupRecView(RecyclerView countriesRecview) {
+        countriesRecview.setLayoutManager(new LinearLayoutManager(getContext()));
+        countryCodeRecyclerviewAdapter = new CountryCodeRecyclerviewAdapter(getContext(), mFilteredCountries, mCountryCodePicker);
+        countryCodeRecyclerviewAdapter.setClickListener(this);
+        countriesRecview.setAdapter(countryCodeRecyclerviewAdapter);
+    }
+
+    @Override
+    public void onItemClick(View view, int position) {
+        if (mFilteredCountries == null) {
+            Log.e(TAG, "no filtered countries found! This should not be happened, Please report!");
+            return;
+        }
+
+        if (mFilteredCountries.size() < position || position < 0) {
+            Log.e(TAG, "Something wrong with the ListView. Please report this!");
+            return;
+        }
+
+        Country country = mFilteredCountries.get(position);
+        /* view is only a separator, so the country is null and we ignore it.
+         see {@link #getFilteredCountries(String)} */
+        if (country == null) return;
+
+        mCountryCodePicker.setSelectedCountry(country);
+        //This is to hide edittext (if opened)
+//        mInputMethodManager.hideSoftInputFromWindow(mEdtSearch.getWindowToken(), 0);
+        dismiss();
     }
 
     private void setupListView(ListView listView) {
@@ -237,5 +273,6 @@ public class CountryCodeDialog extends BottomSheetDialog {
         }
         return mTempCountries;
     }
+
 
 }
